@@ -758,28 +758,16 @@ const CACHED_DATA = ${JSON.stringify(records, null, 2)};
         async function loadAirtable() {
             const statusEl = document.getElementById('api-status');
             try {
-                let records = [], offset = '';
-                do {
-                    const url = `${WORKER_URL}${offset ? '?offset=' + offset : ''}`;
-                    const res = await fetch(url);
-                    if (!res.ok) {
-                        const e = await res.json().catch(() => ({}));
-                        throw new Error(`HTTP ${res.status} — ${e.error?.message || res.statusText}`);
-                    }
-                    const data = await res.json();
-                    records = records.concat(data.records);
-                    offset = data.offset || '';
-                } while (offset);
-
-                allRecords = records;
-                statusEl.textContent = `✅ โหลดสำเร็จ ${records.length} รายการ`;
+                if (typeof CACHED_DATA === 'undefined' || CACHED_DATA.length === 0) {
+                    throw new Error('ยังไม่มีข้อมูลใน data.js — กด Sync เพื่อดึงครั้งแรก');
+                }
+                allRecords = CACHED_DATA;
+                statusEl.textContent = `✅ โหลดจาก data.js สำเร็จ ${allRecords.length} รายการ`;
                 statusEl.className = 'status-bar ok';
                 buildYearDropdown();
-                // course dropdown รอให้เลือกปีก่อน
             } catch (e) {
-                statusEl.textContent = '❌ ' + e.message;
+                statusEl.textContent = '⚠️ ' + e.message;
                 statusEl.className = 'status-bar error';
-                // ไม่โหลดคอร์สใดๆ ถ้า API ล้มเหลว — ต้องแก้ token ก่อน
             }
         }
 
