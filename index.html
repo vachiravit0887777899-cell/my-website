@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบออกใบประกาศนียบัตร</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Prompt:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --gold: #b8963e;
+            --gold-dark: #8B6914;
+            --accent: #c9a84c;
+            --sidebar: #1a1a2e;
+            --sidebar-card: #16213e;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: #0f0f1a;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                flex-direction: row;
+            }
+        }
+
+        .sidebar {
+            width: 100%;
+            background: var(--sidebar);
+            padding: 1.5rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                width: 320px;
+                min-width: 320px;
+                border-bottom: none;
+                border-right: 1px solid rgba(201, 168, 76, 0.2);
+                overflow-y: auto;
+                max-height: 100vh;
+            }
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding-bottom: 1.2rem;
+            border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+        }
+
+        .sidebar-header .badge {
+            display: inline-block;
+            background: rgba(201, 168, 76, 0.15);
+            border: 1px solid rgba(201, 168, 76, 0.4);
+            color: var(--accent);
+            font-size: 10px;
+            letter-spacing: .15em;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-header h1 {
+            font-family: 'Prompt', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 6px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .field select,
+        .field input[type="text"] {
+            width: 100%;
+            background: var(--sidebar-card);
+            border: 1px solid rgba(201, 168, 76, 0.25);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-family: 'Sarabun', sans-serif;
+            color: #fff;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .field select:disabled,
+        .field input:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .field select:focus,
+        .field input:focus {
+            border-color: var(--accent);
+        }
+
+        .field select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .field input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Custom searchable dropdown */
+        .dropdown-wrap {
+            position: relative;
+        }
+
+        .dropdown-box {
+            width: 100%;
+            background: var(--sidebar-card);
+            border: 1px solid rgba(201, 168, 76, 0.25);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color .2s;
+            user-select: none;
+        }
+
+        .dropdown-box.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .dropdown-box.open {
+            border-color: var(--accent);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .dropdown-selected {
+            padding: 10px 14px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.35);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dropdown-selected.chosen {
+            color: #fff;
+        }
+
+        .dropdown-selected .arrow {
+            font-size: 10px;
+            transition: transform .2s;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .dropdown-box.open .arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-panel {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--sidebar-card);
+            border: 1px solid var(--accent);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            z-index: 100;
+            max-height: 240px;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .dropdown-panel.open {
+            display: flex;
+        }
+
+        .dropdown-search {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            flex-shrink: 0;
+        }
+
+        .dropdown-search input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(201, 168, 76, 0.2);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 13px;
+            font-family: 'Sarabun', sans-serif;
+            color: #fff;
+            outline: none;
+        }
+
+        .dropdown-search input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .dropdown-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .dropdown-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .dropdown-list::-webkit-scrollbar-thumb {
+            background: rgba(201, 168, 76, 0.3);
+            border-radius: 2px;
+        }
+
+        .dropdown-item {
+            padding: 9px 14px;
+            font-size: 13px;
+            color: #fff;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background .12s;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(201, 168, 76, 0.15);
+        }
+
+        .dropdown-item.active {
+            background: rgba(201, 168, 76, 0.25);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .dropdown-item.empty {
+            color: rgba(255, 255, 255, 0.3);
+            font-style: italic;
+            cursor: default;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .name-count {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.35);
+            text-align: right;
+            margin-top: 3px;
+        }
+
+        .status-bar {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            background: rgba(201, 168, 76, 0.08);
+            border: 1px solid rgba(201, 168, 76, 0.15);
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        .status-bar.error {
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.3);
+            background: rgba(255, 107, 107, 0.08);
+        }
+
+        .status-bar.ok {
+            color: #6bffb8;
+            border-color: rgba(107, 255, 184, 0.3);
+            background: rgba(107, 255, 184, 0.08);
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(201, 168, 76, 0.2);
+        }
+
+        .btn-download {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, var(--gold-dark), var(--accent));
+            border: none;
+            border-radius: 10px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            letter-spacing: .03em;
+            transition: opacity .2s, transform .1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-download:hover {
+            opacity: .9;
+        }
+
+        .btn-download:active {
+            transform: scale(0.98);
+        }
+
+        .btn-download:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tip {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* Preview */
+        .preview-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.2rem;
+            background: #0f0f1a;
+        }
+
+        .preview-wrapper {
+            width: 100%;
+            max-width: 860px;
+        }
+
+        .preview-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Empty state */
+        #cert-empty {
+            width: 100%;
+            min-height: 200px;
+            aspect-ratio: 16 / 9;
+            border-radius: 4px;
+            border: 2px dashed rgba(201, 168, 76, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        #cert-empty .icon {
+            font-size: 48px;
+        }
+
+        #cert-empty p {
+            font-size: 14px;
+            letter-spacing: .05em;
+        }
+
+        #cert-container {
+            display: none;
+            position: relative;
+            width: 100%;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            container-type: inline-size;
+        }
+
+        #cert-bg {
+            position: relative;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #cert-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cert-name-area {
+            position: absolute;
+            bottom: 35%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cert-course-area {
+            position: absolute;
+            top: 41%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 80%;
+        }
+
+        .cert-course-text {
+            font-family: 'Sarabun', sans-serif;
+            font-size: clamp(8px, 3.5cqw, 36px);
+            font-weight: 700;
+            color: #000000;
+        }
+
+        .cert-desc-area {
+            position: absolute;
+            bottom: 21%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            text-align: center;
+        }
+
+        .cert-desc-text {
+            font-family: 'Sarabun', sans-serif;
+            font-size: clamp(6px, 1.8cqw, 18px);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .cert-name-text {
+            font-family: 'Sarabun', sans-serif;
+            font-size: clamp(8px, 3cqw, 32px);
+            font-weight: 700;
+            color: #000000;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .placeholder-text {
+            opacity: 0.3;
+            font-style: italic;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="badge">Certificate Generator</div>
+            <h1>ระบบออกใบประกาศนียบัตร</h1>
+            <p>ศูนย์อบรมคอมพิวเตอร์ วัดพระธรรมกาย</p>
+        </div>
+
+        <div id="api-status" class="status-bar">⏳ กำลังโหลดข้อมูล...</div>
+
+        <!-- 0. เลือกปี -->
+        <div class="field">
+            <label>ปีที่อบรม</label>
+            <div class="dropdown-wrap" id="year-dropdown-wrap">
+                <div class="dropdown-box" id="year-dropdown-box" onclick="toggleYearDropdown()">
+                    <div class="dropdown-selected" id="year-dropdown-selected">
+                        <span id="year-dropdown-label">— เลือกปี —</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                </div>
+                <div class="dropdown-panel" id="year-dropdown-panel">
+                    <div class="dropdown-list" id="year-dropdown-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. เลือกหลักสูตร -->
+        <div class="field">
+            <label>หลักสูตร / คอร์สเรียน</label>
+            <div class="dropdown-wrap" id="course-dropdown-wrap">
+                <div class="dropdown-box disabled" id="course-dropdown-box" onclick="toggleCourseDropdown()">
+                    <div class="dropdown-selected" id="course-dropdown-selected">
+                        <span id="course-dropdown-label">— เลือกหลักสูตร —</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                </div>
+                <div class="dropdown-panel" id="course-dropdown-panel">
+                    <div class="dropdown-search">
+                        <input type="text" id="course-search-input" placeholder="🔍 ค้นหาคอร์ส..."
+                            oninput="filterCourseDropdown()" autocomplete="off">
+                    </div>
+                    <div class="dropdown-list" id="course-dropdown-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. เลือกชื่อผู้รับ (searchable dropdown) -->
+        <div class="field">
+            <label>ชื่อผู้รับใบประกาศ</label>
+            <div class="dropdown-wrap">
+                <div class="dropdown-box disabled" id="name-dropdown-box" onclick="toggleDropdown()">
+                    <div class="dropdown-selected" id="name-dropdown-selected">
+                        <span id="name-dropdown-label">— เลือกคอร์สก่อน —</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                </div>
+                <div class="dropdown-panel" id="name-dropdown-panel">
+                    <div class="dropdown-search">
+                        <input type="text" id="name-search-input" placeholder="🔍 ค้นหาชื่อ..."
+                            oninput="filterDropdown()" autocomplete="off">
+                    </div>
+                    <div class="dropdown-list" id="name-dropdown-list"></div>
+                </div>
+            </div>
+            <div class="name-count" id="name-count"></div>
+        </div>
+
+        <!-- 3. ชื่อที่จะพิมพ์บนใบ -->
+        <input type="hidden" id="inp-name">
+
+        <div class="divider"></div>
+
+        <button class="btn-download" id="btn-dl" onclick="downloadCert()" disabled>
+            ⬇ ดาวน์โหลดใบประกาศ (PNG)
+        </button>
+
+        <p class="tip">เลือกหลักสูตร → เลือกชื่อ → ดาวน์โหลด</p>
+
+        <div class="divider"></div>
+
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:4px;letter-spacing:.08em;">⚙ ปรับตำแหน่ง
+        </div>
+
+        <div class="field">
+            <label style="font-size:10px;">ชื่อคอร์ส (% จากบน)</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="range" id="sl-course" min="20" max="60" value="41" step="0.5" oninput="adjustPos()"
+                    style="flex:1;height:4px;accent-color:#c9a84c;">
+                <span id="sl-course-val" style="font-size:12px;color:#c9a84c;min-width:32px;">41%</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label style="font-size:10px;">ชื่อผู้รับ (% จากล่าง)</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="range" id="sl-name" min="20" max="55" value="34.5" step="0.5" oninput="adjustPos()"
+                    style="flex:1;height:4px;accent-color:#c9a84c;">
+                <span id="sl-name-val" style="font-size:12px;color:#c9a84c;min-width:32px;">34.5%</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label style="font-size:10px;">ข้อความด้านล่าง (% จากล่าง)</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="range" id="sl-desc" min="5" max="35" value="21" step="0.5" oninput="adjustPos()"
+                    style="flex:1;height:4px;accent-color:#c9a84c;">
+                <span id="sl-desc-val" style="font-size:12px;color:#c9a84c;min-width:32px;">21%</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="preview-area">
+        <div class="preview-wrapper">
+            <div class="preview-label">
+                <div class="status-dot"></div>
+                Preview — อัปเดตแบบ real-time
+            </div>
+
+            <!-- Empty state (แสดงก่อนเลือกคอร์ส) -->
+            <div id="cert-empty">
+                <div class="icon">📜</div>
+                <p>เลือกหลักสูตรเพื่อแสดงใบประกาศ</p>
+            </div>
+
+            <!-- Certificate (ซ่อนอยู่ก่อน) -->
+            <div id="cert-container">
+                <img id="cert-bg" src="" alt="certificate background">
+                <div id="cert-overlay">
+                    <!-- ชื่อคอร์ส (บนสุด) -->
+                    <div class="cert-course-area">
+                        <div class="cert-course-text" id="disp-course">ชื่อคอร์ส</div>
+                    </div>
+                    <!-- ชื่อผู้รับ -->
+                    <div class="cert-name-area">
+                        <div class="cert-name-text placeholder-text" id="disp-name">ชื่อ-นามสกุล</div>
+                    </div>
+                    <!-- ข้อความด้านล่างทั้งหมด -->
+                    <div class="cert-desc-area">
+                        <div class="cert-desc-text">
+                            ได้ผ่านการอบรมหลักสูตร <span id="disp-course-inline" style="color:#000000"></span>
+                            เพื่อการเผยแพร่พระพุทธศาสนา<br>
+                            ระหว่างวันที่ <span id="disp-date-inline" style="color:#000000"></span> ณ
+                            อาคาร 100 ปี ชั้น L1M ห้องอบรมคอมพิวเตอร์
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================================
+        // CONFIG
+        // ============================================================
+        const WORKER_URL = 'https://airtable-proxy.juntarang-akarawit.workers.dev';
+
+        // ชื่อคอร์ส (ตรงกับ Airtable) → ไฟล์รูปพื้นหลัง
+        const CERT_BG = 'main1.png'; // รูปเดียวสำหรับทุกคอร์ส
+
+        const COL_FIRSTNAME = 'ชื่อ';
+        const COL_LASTNAME = 'นามสกุล (ฉายา)';
+        const COL_COURSE_KEY = 'โปรแกรมที่สมัคร';  // ใช้กรองรายชื่อ (มีทุกแถว)
+        const COL_COURSE_NAME = 'ชื่อโปรแกรม';       // ใช้แสดงชื่อสั้นใน dropdown
+        const COL_DATE = 'วันที่อบรม';
+
+        // ============================================================
+        let allRecords = [];
+        let filteredByCourse = [];
+        let dropdownOpen = false;
+        let courseDropdownOpen = false;
+        let courseMap = {};
+        let allCourseKeys = [];
+        let allYears = [];
+        let selectedCourse = '';
+        let selectedYear = '';
+
+        // โหลดข้อมูลจาก Airtable
+        async function loadAirtable() {
+            const statusEl = document.getElementById('api-status');
+            try {
+                let records = [], offset = '';
+                do {
+                    const url = `${WORKER_URL}${offset ? '?offset=' + offset : ''}`;
+                    const res = await fetch(url);
+                    if (!res.ok) {
+                        const e = await res.json().catch(() => ({}));
+                        throw new Error(`HTTP ${res.status} — ${e.error?.message || res.statusText}`);
+                    }
+                    const data = await res.json();
+                    records = records.concat(data.records);
+                    offset = data.offset || '';
+                } while (offset);
+
+                allRecords = records;
+                statusEl.textContent = `✅ โหลดสำเร็จ ${records.length} รายการ`;
+                statusEl.className = 'status-bar ok';
+                buildYearDropdown();
+                // course dropdown รอให้เลือกปีก่อน
+            } catch (e) {
+                statusEl.textContent = '❌ ' + e.message;
+                statusEl.className = 'status-bar error';
+                // ไม่โหลดคอร์สใดๆ ถ้า API ล้มเหลว — ต้องแก้ token ก่อน
+            }
+        }
+
+        // ===== YEAR DROPDOWN =====
+        function buildYearDropdown() {
+            const years = new Set();
+            allRecords.forEach(r => {
+                const date = r.fields[COL_DATE] || '';
+                // ดึงปี พ.ศ. จากข้อความวันที่ เช่น "วันที่ 8-10 มี.ค. 2566" → "2566"
+                const match = date.match(/\d{4}/);
+                if (match) years.add(match[0]);
+            });
+            allYears = Array.from(years).sort((a, b) => b - a); // เรียงจากใหม่ → เก่า
+            renderYearItems(allYears);
+        }
+
+        function renderYearItems(years) {
+            const list = document.getElementById('year-dropdown-list');
+            list.innerHTML = '';
+            if (!years.length) {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item empty';
+                div.textContent = 'ไม่พบข้อมูลปี';
+                list.appendChild(div);
+                return;
+            }
+            years.forEach(y => {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item' + (y === selectedYear ? ' active' : '');
+                div.textContent = 'พ.ศ. ' + y;
+                div.onclick = () => selectYear(y);
+                list.appendChild(div);
+            });
+        }
+
+        function toggleYearDropdown() {
+            const box = document.getElementById('year-dropdown-box');
+            const panel = document.getElementById('year-dropdown-panel');
+            const isOpen = box.classList.contains('open');
+            box.classList.toggle('open', !isOpen);
+            panel.classList.toggle('open', !isOpen);
+        }
+
+        function closeYearDropdown() {
+            document.getElementById('year-dropdown-box').classList.remove('open');
+            document.getElementById('year-dropdown-panel').classList.remove('open');
+        }
+
+        function selectYear(year) {
+            selectedYear = year;
+            const lbl = document.getElementById('year-dropdown-label');
+            lbl.textContent = 'พ.ศ. ' + year;
+            lbl.closest('.dropdown-selected').classList.add('chosen');
+            closeYearDropdown();
+
+            // reset คอร์ส + ชื่อ
+            selectedCourse = '';
+            document.getElementById('course-dropdown-label').textContent = '— เลือกหลักสูตร —';
+            document.getElementById('course-dropdown-selected').classList.remove('chosen');
+            document.getElementById('name-dropdown-label').textContent = '— เลือกคอร์สก่อน —';
+            document.getElementById('name-dropdown-selected').classList.remove('chosen');
+            document.getElementById('inp-name').value = '';
+            document.getElementById('cert-container').style.display = 'none';
+            document.getElementById('cert-empty').style.display = 'flex';
+            document.getElementById('name-dropdown-box').classList.add('disabled');
+            document.getElementById('btn-dl').disabled = true;
+
+            // enable course dropdown และ rebuild
+            document.getElementById('course-dropdown-box').classList.remove('disabled');
+            buildCourseDropdown();
+        }
+
+        // สร้าง dropdown คอร์ส จาก Airtable เท่านั้น
+        function buildCourseDropdown() {
+            // กรองเฉพาะ record ที่ตรงกับปีที่เลือก
+            const recordsInYear = selectedYear
+                ? allRecords.filter(r => {
+                    const date = r.fields[COL_DATE] || '';
+                    const match = date.match(/\d{4}/);
+                    return match && match[0] === selectedYear;
+                })
+                : allRecords;
+
+            // สร้าง map: ชื่อโปรแกรม (สั้น) → { keys: [โปรแกรมที่สมัคร,...], date: วันที่อบรม }
+            // เพราะ ชื่อโปรแกรม มีแค่บางแถว → ต้องหา โปรแกรมที่สมัคร ที่ตรงกันก่อน
+            courseMap = {};
+
+            // รอบที่ 1: หา mapping ชื่อยาว → ชื่อสั้น + วันที่ จากแถวที่มีครบ
+            const longToShort = {};  // โปรแกรมที่สมัคร → { label, date }
+            recordsInYear.forEach(r => {
+                const longKey = r.fields[COL_COURSE_KEY];
+                const shortKey = r.fields[COL_COURSE_NAME];
+                const date = r.fields[COL_DATE];
+                if (longKey && shortKey && !longToShort[longKey]) {
+                    longToShort[longKey] = { label: shortKey, date: date || '' };
+                }
+            });
+
+            // รอบที่ 2: สร้าง courseMap โดยใช้ชื่อสั้นเป็น key
+            // เก็บชื่อยาวทั้งหมดที่ map ไปหาชื่อสั้นเดียวกัน (เพื่อกรองรายชื่อ)
+            recordsInYear.forEach(r => {
+                const longKey = r.fields[COL_COURSE_KEY];
+                if (!longKey) return;
+                const info = longToShort[longKey];
+                if (!info) return;
+                const shortKey = info.label;
+                if (!courseMap[shortKey]) {
+                    courseMap[shortKey] = { longKeys: [], date: info.date };
+                }
+                if (!courseMap[shortKey].longKeys.includes(longKey)) {
+                    courseMap[shortKey].longKeys.push(longKey);
+                }
+            });
+
+            allCourseKeys = Object.keys(courseMap).sort((a, b) => a.localeCompare(b, 'th'));
+            renderCourseItems(allCourseKeys);
+        }
+
+        function renderCourseItems(keys) {
+            const list = document.getElementById('course-dropdown-list');
+            list.innerHTML = '';
+            if (!keys.length) {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item empty';
+                div.textContent = 'ไม่พบคอร์ส';
+                list.appendChild(div);
+                return;
+            }
+            keys.forEach(k => {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item' + (k === selectedCourse ? ' active' : '');
+                div.textContent = k;
+                div.onclick = () => selectCourse(k);
+                list.appendChild(div);
+            });
+        }
+
+        function toggleCourseDropdown() {
+            const box = document.getElementById('course-dropdown-box');
+            if (box.classList.contains('disabled')) return; // ยังไม่เลือกปี
+            courseDropdownOpen = !courseDropdownOpen;
+            document.getElementById('course-dropdown-box').classList.toggle('open', courseDropdownOpen);
+            document.getElementById('course-dropdown-panel').classList.toggle('open', courseDropdownOpen);
+            if (courseDropdownOpen) {
+                document.getElementById('course-search-input').value = '';
+                renderCourseItems(allCourseKeys);
+                setTimeout(() => document.getElementById('course-search-input').focus(), 50);
+            }
+        }
+
+        function closeCourseDropdown() {
+            courseDropdownOpen = false;
+            document.getElementById('course-dropdown-box').classList.remove('open');
+            document.getElementById('course-dropdown-panel').classList.remove('open');
+        }
+
+        function filterCourseDropdown() {
+            const q = document.getElementById('course-search-input').value.trim().toLowerCase();
+            const results = q
+                ? allCourseKeys.filter(k => k.toLowerCase().includes(q))
+                : allCourseKeys;
+            renderCourseItems(results);
+        }
+
+        function selectCourse(course) {
+            selectedCourse = course;
+            const lbl = document.getElementById('course-dropdown-label');
+            lbl.textContent = course;
+            lbl.closest('.dropdown-selected').classList.add('chosen');
+            closeCourseDropdown();
+            // เรียก onCourseChange logic โดยตรง
+            onCourseChangeValue(course);
+        }
+
+        // เมื่อเลือกคอร์ส
+        function onCourseChange() {
+            const course = selectedCourse;
+        }
+
+        function onCourseChangeValue(course) {
+
+            // Reset name fields
+            document.getElementById('inp-name').value = '';
+            resetNameDropdown();
+
+            if (!course) {
+                // ซ่อนรูป กลับ empty state
+                document.getElementById('cert-container').style.display = 'none';
+                document.getElementById('cert-empty').style.display = 'flex';
+                // Disable name dropdown + name input
+                document.getElementById('name-dropdown-box').classList.add('disabled');
+                document.getElementById('inp-name').disabled = true;
+                document.getElementById('name-dropdown-label').textContent = '— เลือกคอร์สก่อน —';
+                document.getElementById('inp-name').placeholder = 'เลือกคอร์สก่อน';
+                filteredByCourse = [];
+                updateCert();
+                return;
+            }
+
+            // แสดงรูปใบประกาศ
+            document.getElementById('cert-bg').src = CERT_BG;
+            document.getElementById('cert-container').style.display = 'block';
+            document.getElementById('cert-empty').style.display = 'none';
+
+            // Enable name dropdown + name input
+            document.getElementById('name-dropdown-box').classList.remove('disabled');
+            document.getElementById('inp-name').disabled = false;
+            document.getElementById('inp-name').placeholder = 'เลือกจากรายการหรือพิมพ์เอง';
+
+            // กรองรายชื่อตามคอร์ส
+            // กรองด้วยชื่อสั้น → หาชื่อยาวทั้งหมดที่ map ไปชื่อสั้นนี้ แล้วกรองรายชื่อ
+            const longKeys = (courseMap[course] || {}).longKeys || [];
+            filteredByCourse = allRecords.filter(r => longKeys.includes(r.fields[COL_COURSE_KEY]));
+            renderDropdownItems(filteredByCourse);
+
+            const cnt = document.getElementById('name-count');
+            cnt.textContent = filteredByCourse.length > 0 ? `พบ ${filteredByCourse.length} คน ในหลักสูตรนี้` : 'ไม่พบรายชื่อในหลักสูตรนี้';
+
+            document.getElementById('name-dropdown-label').textContent = '— เลือกชื่อผู้รับ —';
+            updateCert();
+        }
+
+        // toggle dropdown
+        function toggleDropdown() {
+            const box = document.getElementById('name-dropdown-box');
+            const panel = document.getElementById('name-dropdown-panel');
+            if (box.classList.contains('disabled')) return;
+
+            dropdownOpen = !dropdownOpen;
+            box.classList.toggle('open', dropdownOpen);
+            panel.classList.toggle('open', dropdownOpen);
+
+            if (dropdownOpen) {
+                document.getElementById('name-search-input').value = '';
+                renderDropdownItems(filteredByCourse);
+                setTimeout(() => document.getElementById('name-search-input').focus(), 50);
+            }
+        }
+
+        // ปิด dropdown เมื่อคลิกนอก
+        document.addEventListener('click', e => {
+            const nameWrap = document.querySelector('#name-dropdown-box')?.closest('.dropdown-wrap');
+            if (nameWrap && !nameWrap.contains(e.target)) closeDropdown();
+
+            const courseWrap = document.getElementById('course-dropdown-wrap');
+            if (courseWrap && !courseWrap.contains(e.target)) closeCourseDropdown();
+
+            const yearWrap = document.getElementById('year-dropdown-wrap');
+            if (yearWrap && !yearWrap.contains(e.target)) closeYearDropdown();
+        });
+
+        function closeDropdown() {
+            dropdownOpen = false;
+            document.getElementById('name-dropdown-box').classList.remove('open');
+            document.getElementById('name-dropdown-panel').classList.remove('open');
+        }
+
+        // กรองชื่อใน dropdown
+        function filterDropdown() {
+            const q = document.getElementById('name-search-input').value.trim().toLowerCase();
+            const pool = filteredByCourse;
+            const results = q
+                ? pool.filter(r => {
+                    const fn = (r.fields[COL_FIRSTNAME] || '').toLowerCase();
+                    const ln = (r.fields[COL_LASTNAME] || '').toLowerCase();
+                    return fn.includes(q) || ln.includes(q);
+                })
+                : pool;
+            renderDropdownItems(results);
+        }
+
+        // แสดงรายการใน dropdown
+        function renderDropdownItems(records) {
+            const list = document.getElementById('name-dropdown-list');
+            list.innerHTML = '';
+
+            if (!records.length) {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item empty';
+                div.textContent = 'ไม่พบรายชื่อ';
+                list.appendChild(div);
+                return;
+            }
+
+            records.slice(0, 200).forEach(r => {
+                const fn = r.fields[COL_FIRSTNAME] || '';
+                const ln = r.fields[COL_LASTNAME] || '';
+                const fullName = (fn + ' ' + ln).trim();
+                if (!fullName) return;
+                const div = document.createElement('div');
+                div.className = 'dropdown-item';
+                div.textContent = fullName;
+                div.onclick = () => selectName(fullName);
+                list.appendChild(div);
+            });
+        }
+
+        // เลือกชื่อ
+        function selectName(name) {
+            document.getElementById('inp-name').value = name;
+            // อัปเดต label
+            const lbl = document.getElementById('name-dropdown-label');
+            lbl.textContent = name;
+            lbl.closest('.dropdown-selected').classList.add('chosen');
+            // highlight
+            document.querySelectorAll('.dropdown-item').forEach(d => {
+                d.classList.toggle('active', d.textContent === name);
+            });
+            closeDropdown();
+            updateCert();
+        }
+
+        function resetNameDropdown() {
+            const lbl = document.getElementById('name-dropdown-label');
+            lbl.textContent = '— เลือกชื่อผู้รับ —';
+            lbl.closest('.dropdown-selected').classList.remove('chosen');
+            document.getElementById('name-dropdown-list').innerHTML = '';
+            document.getElementById('name-count').textContent = '';
+            closeDropdown();
+        }
+
+        // อัปเดต preview
+        function updateCert() {
+            const name = document.getElementById('inp-name').value.trim();
+            const course = selectedCourse;
+            const disp = document.getElementById('disp-name');
+            const btn = document.getElementById('btn-dl');
+
+            // ดึงวันที่จาก courseMap (key คือชื่อสั้นอยู่แล้ว)
+            const info = courseMap[selectedCourse] || {};
+            const dateText = info.date || '';
+
+            // อัปเดตชื่อคอร์สบนรูป
+            const dispCourse = document.getElementById('disp-course');
+            dispCourse.textContent = selectedCourse ? selectedCourse : 'ชื่อคอร์ส';
+
+            // อัปเดตชื่อคน
+            if (name) {
+                disp.textContent = name;
+                disp.classList.remove('placeholder-text');
+            } else {
+                disp.textContent = 'ชื่อ-นามสกุล';
+                disp.classList.add('placeholder-text');
+            }
+
+            // อัปเดตเฉพาะส่วนที่เว้นไว้ในประโยค
+            if (selectedCourse) {
+                document.getElementById('disp-course-inline').textContent = selectedCourse;
+                document.getElementById('disp-date-inline').textContent = dateText;
+            }
+
+            btn.disabled = !(name && selectedCourse);
+        }
+
+        // ดาวน์โหลด PNG
+        async function downloadCert() {
+            const btn = document.getElementById('btn-dl');
+            btn.textContent = '⏳ กำลังสร้างไฟล์...';
+            btn.disabled = true;
+            try {
+                const canvas = await html2canvas(document.getElementById('cert-container'), {
+                    scale: 3, useCORS: true, allowTaint: true, backgroundColor: null
+                });
+                const name = document.getElementById('inp-name').value.trim().replace(/\s+/g, '_');
+                const link = document.createElement('a');
+                link.download = 'certificate_' + name + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
+            btn.textContent = '⬇ ดาวน์โหลดใบประกาศ (PNG)';
+            updateCert();
+        }
+
+        // ปรับตำแหน่งชื่อ
+        function adjustPos() {
+            // ชื่อคอร์ส
+            const vCourse = document.getElementById('sl-course').value;
+            document.getElementById('sl-course-val').textContent = vCourse + '%';
+            document.querySelector('.cert-course-area').style.top = vCourse + '%';
+
+            // ชื่อผู้รับ
+            const vName = document.getElementById('sl-name').value;
+            document.getElementById('sl-name-val').textContent = vName + '%';
+            document.querySelector('.cert-name-area').style.bottom = vName + '%';
+
+            // ข้อความด้านล่าง
+            const vDesc = document.getElementById('sl-desc').value;
+            document.getElementById('sl-desc-val').textContent = vDesc + '%';
+            document.querySelector('.cert-desc-area').style.bottom = vDesc + '%';
+        }
+
+        loadAirtable();
+    </script>
+</body>
+
+</html>
