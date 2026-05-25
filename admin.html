@@ -519,8 +519,21 @@
             <p>ศูนย์อบรมคอมพิวเตอร์ วัดพระธรรมกาย</p>
         </div>
 
-        <div id="api-status" class="status-bar">⏳ กำลังโหลดข้อมูล...</div>
+        <div id="api-status" class="status-bar">⏳ กำลังโหลดจาก data.js...</div>
 
+        <!-- ปุ่ม Admin: ดึงข้อมูลใหม่จาก Airtable -->
+        <div
+            style="background:rgba(255,100,100,0.1);border:1px solid rgba(255,100,100,0.3);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:11px;color:#ff8a80;letter-spacing:.08em;">🔐 ADMIN PANEL</div>
+            <button onclick="syncFromAirtable()" id="btn-sync"
+                style="width:100%;padding:10px;background:linear-gradient(135deg,#b71c1c,#e53935);border:none;border-radius:8px;font-family:'Prompt',sans-serif;font-size:13px;font-weight:600;color:#fff;cursor:pointer;">
+                🔄 Sync ข้อมูลจาก Airtable
+            </button>
+            <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center;"></div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.25);text-align:center;line-height:1.5;">
+                กดเพื่อดึงข้อมูลล่าสุดจาก Airtable<br>แล้วคัดลอก data.js ไปอัปโหลดขึ้นเซิร์ฟเวอร์
+            </div>
+        </div>
         <!-- 0. เลือกปี -->
         <div class="field">
             <label>ปีที่อบรม</label>
@@ -665,7 +678,62 @@
         // ============================================================
         // CONFIG
         // ============================================================
-        // ไม่ใช้ Worker แล้ว — อ่านจาก data.js แทน
+        const WORKER_URL = 'https://airtable-proxy.juntarang-akarawit.workers.dev';
+
+        // ===== ADMIN: ดึงข้อมูลใหม่จาก Airtable แล้วสร้าง data.js =====
+        async function syncFromAirtable() {
+            const btn = document.getElementById('btn-sync');
+            const syncStatus = document.getElementById('sync-status');
+            btn.disabled = true;
+            btn.textContent = '⏳ กำลังดึงข้อมูล...';
+            syncStatus.textContent = '';
+
+            try {
+                let records = [], offset = '';
+                let page = 1;
+                do {
+                    syncStatus.textContent = `กำลังโหลดหน้าที่ ${page}...`;
+                    const url = `${WORKER_URL}${offset ? '?offset=' + offset : ''}`;
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    records = records.concat(data.records);
+                    offset = data.offset || '';
+                    page++;
+                } while (offset);
+
+                // สร้างเนื้อหาไฟล์ data.js
+                const updatedAt = new Date().toLocaleString('th-TH');
+                const jsContent = `// data.js — อัปเดตล่าสุด: ${updatedAt}
+// ห้ามแก้ไขด้วยมือ — ใช้ปุ่ม Sync ใน admin.html เท่านั้น
+const CACHED_DATA = ${JSON.stringify(records, null, 2)};
+`;
+
+                // ดาวน์โหลดไฟล์ data.js
+                const blob = new Blob([jsContent], { type: 'text/javascript' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'data.js';
+                link.click();
+
+                syncStatus.textContent = `✅ ดึงข้อมูล ${records.length} รายการสำเร็จ! ดาวน์โหลด data.js แล้ว`;
+                syncStatus.style.color = '#6bffb8';
+
+                // โหลดข้อมูลใหม่เข้าหน้านี้ด้วย
+                allRecords = records;
+                buildYearDropdown();
+                document.getElementById('api-status').textContent = `✅ ${records.length} รายการ (Synced)`;
+                document.getElementById('api-status').className = 'status-bar ok';
+
+            } catch (e) {
+                syncStatus.textContent = '❌ ' + e.message;
+                syncStatus.style.color = '#ff6b6b';
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🔄 Sync ข้อมูลจาก Airtable';
+        }
+
         // ชื่อคอร์ส (ตรงกับ Airtable) → ไฟล์รูปพื้นหลัง
         const CERT_BG = 'main1.png'; // รูปเดียวสำหรับทุกคอร์ส
 
@@ -686,20 +754,32 @@
         let selectedCourse = '';
         let selectedYear = '';
 
+        // โหลดข้อมูลจาก Airtable
         async function loadAirtable() {
             const statusEl = document.getElementById('api-status');
             try {
-                // อ่านจาก data.js แทน ไม่เรียก API
-                if (typeof CACHED_DATA === 'undefined' || CACHED_DATA.length === 0) {
-                    throw new Error('ยังไม่มีข้อมูล กรุณาให้ Admin กด Sync ข้อมูลก่อน');
-                }
-                allRecords = CACHED_DATA;
-                statusEl.textContent = `✅ โหลดสำเร็จ ${allRecords.length} รายการ`;
+                let records = [], offset = '';
+                do {
+                    const url = `${WORKER_URL}${offset ? '?offset=' + offset : ''}`;
+                    const res = await fetch(url);
+                    if (!res.ok) {
+                        const e = await res.json().catch(() => ({}));
+                        throw new Error(`HTTP ${res.status} — ${e.error?.message || res.statusText}`);
+                    }
+                    const data = await res.json();
+                    records = records.concat(data.records);
+                    offset = data.offset || '';
+                } while (offset);
+
+                allRecords = records;
+                statusEl.textContent = `✅ โหลดสำเร็จ ${records.length} รายการ`;
                 statusEl.className = 'status-bar ok';
                 buildYearDropdown();
+                // course dropdown รอให้เลือกปีก่อน
             } catch (e) {
                 statusEl.textContent = '❌ ' + e.message;
                 statusEl.className = 'status-bar error';
+                // ไม่โหลดคอร์สใดๆ ถ้า API ล้มเหลว — ต้องแก้ token ก่อน
             }
         }
 
